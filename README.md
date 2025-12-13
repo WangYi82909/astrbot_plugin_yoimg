@@ -1,0 +1,2 @@
+# astrbot_plugin_yoimg
+这是一个基于AstrBot框架的图像生成插件，支持人格初始化与智能图像生成功能
