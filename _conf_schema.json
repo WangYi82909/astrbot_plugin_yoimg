@@ -1,0 +1,15 @@
+{
+  "server_url": {
+    "description": "服务器地址",
+    "type": "string",
+    "hint": "基础服务器地址，如 http://154.40.35.203:520",
+    "default": "http://154.40.35.203:520",
+    "obvious_hint": true
+  },
+  "enable_debug_log": {
+    "description": "启用调试日志",
+    "type": "bool",
+    "hint": "是否显示详细的调试信息",
+    "default": false
+  }
+}
