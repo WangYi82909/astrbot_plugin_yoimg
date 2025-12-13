@@ -1,12 +1,7 @@
-name: "astrbot_plugin_yoimg"
-author: "梦千秋"
-description: "适合持续调试的图像生成，基于Gotee的Z-Image-Turbo"
-version: "1.0.2"
-repo: "https://github.com/WangYi82909/astrbot_plugin_yoimg"
-requirements:
-  - "none"
-tags:
-  - "history"
-  - "persona"
-  - "query"
-  - "debug"
+name: astrbot_plugin_yoimg
+desc: 这是一个基于AstrBot框架的图像生成扩展插件，支持结合人设聊天记录关键词润色生图，支持中转请求
+version: v1.0.1
+author: wangyi
+repo: https://github.com/WangYi82909/astrbot_plugin_yoimg
+
+
