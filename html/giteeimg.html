@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gitee图片管理 - YOIMG管理</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .img-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .img-card {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: relative;
+            transition: transform 0.2s;
+        }
+        .img-card:hover {
+            transform: translateY(-5px);
+        }
+        .img-card img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            display: block;
+        }
+        .img-card .img-info {
+            padding: 10px;
+            background: #f8f9fa;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .img-card .delete-btn {
+            color: #dc3545;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: color 0.2s;
+        }
+        .img-card .delete-btn:hover {
+            color: #bb2d3b;
+        }
+        .empty-tip {
+            text-align: center;
+            padding: 50px;
+            color: #718096;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-plug"></i>
+                    <span>YOIMG</span>
+                </div>
+                <button class="close-sidebar" id="closeSidebar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="index.html">
+                            <i class="fas fa-home"></i>
+                            <span>主页</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="config.html">
+                            <i class="fas fa-cog"></i>
+                            <span>接口配置</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="personas.html">
+                            <i class="fas fa-user-circle"></i>
+                            <span>人格管理</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="logs.html">
+                            <i class="fas fa-history"></i>
+                            <span>文件日志</span>
+                        </a>
+                    </li>
+                    <!-- 新增：图片管理器导航 -->
+                    <li class="active">
+                        <a href="giteeimg.html">
+                            <i class="fas fa-images"></i>
+                            <span>Gitee图片管理</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content" id="mainContent">
+            <header class="topbar">
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1>Gitee图片管理</h1>
+                <div class="user-info">
+                    <span>管理员</span>
+                    <i class="fas fa-user-circle"></i>
+                </div>
+            </header>
+
+            <!-- 图片网格 -->
+            <div class="cards-container">
+                <div class="card" style="grid-column: 1 / -1;">
+                    <div class="card-header">
+                        <i class="fas fa-images"></i>
+                        <h3>图片列表</h3>
+                    </div>
+                    <div class="card-content">
+                        <div id="imgContainer" class="img-grid">
+                            <div class="empty-tip">加载图片中...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // 加载图片列表
+        function loadImgList() {
+            fetch('/api/giteeimg/list')
+                .then(res => res.json())
+                .then(data => {
+                    const container = document.getElementById('imgContainer');
+                    if (!data.success || data.data.length === 0) {
+                        container.innerHTML = '<div class="empty-tip">暂无图片</div>';
+                        return;
+                    }
+                    let html = '';
+                    data.data.forEach(img => {
+                        html += `
+                            <div class="img-card">
+                                <img src="${img.url}" alt="${img.filename}">
+                                <div class="img-info">
+                                    <span>${img.filename}</span>
+                                    <i class="fas fa-trash delete-btn" onclick="deleteImg('${img.filename}')"></i>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = html;
+                })
+                .catch(err => {
+                    document.getElementById('imgContainer').innerHTML = `<div class="empty-tip">加载失败: ${err.message}</div>`;
+                });
+        }
+
+        // 删除图片
+        function deleteImg(filename) {
+            if (!confirm(`确定删除图片【${filename}】吗？`)) return;
+            fetch(`/api/giteeimg/delete/${filename}`, {
+                method: 'DELETE'
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('删除成功');
+                    loadImgList(); // 刷新列表
+                } else {
+                    alert(`删除失败: ${data.message}`);
+                }
+            })
+            .catch(err => {
+                alert(`删除失败: ${err.message}`);
+            });
+        }
+
+        // 页面加载时加载图片
+        window.onload = function() {
+            loadImgList();
+        };
+
+        // 侧边栏切换逻辑
+        document.getElementById('menuToggle')?.addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('active');
+            document.getElementById('mainContent').classList.toggle('active');
+        });
+
+        document.getElementById('closeSidebar')?.addEventListener('click', function() {
+            document.getElementById('sidebar').classList.remove('active');
+            document.getElementById('mainContent').classList.remove('active');
+        });
+    </script>
+</body>
+</html>

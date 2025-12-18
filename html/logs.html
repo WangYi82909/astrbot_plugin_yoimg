@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件日志 - YOIMG管理</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .modal-header {
+            background: linear-gradient(135deg, rgba(157, 204, 158, 0.9), rgba(142, 184, 143, 0.9));
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+        .close-modal {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 8px;
+        }
+        .modal-body {
+            padding: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        pre {
+            margin: 0;
+            font-family: 'Consolas', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .log-item {
+            background: rgba(0,0,0,0.03);
+            border-radius: 8px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid #BEE9BD;
+        }
+        .log-item:hover {
+            background: rgba(157, 204, 158, 0.1);
+            transform: translateX(5px);
+        }
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        .log-id {
+            font-weight: bold;
+            color: #2D3748;
+        }
+        .log-time {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+        .log-content-container {
+            width: 100%;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-plug"></i>
+                    <span>YOIMG</span>
+                </div>
+                <button class="close-sidebar" id="closeSidebar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="index.html">
+                            <i class="fas fa-home"></i>
+                            <span>主页</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="config.html">
+                            <i class="fas fa-cog"></i>
+                            <span>接口配置</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="personas.html">
+                            <i class="fas fa-user-circle"></i>
+                            <span>人格管理</span>
+                        </a>
+                    </li>
+                    <li class="active">
+                        <a href="logs.html">
+                            <i class="fas fa-history"></i>
+                            <span>文件日志</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content" id="mainContent">
+            <header class="topbar">
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1>文件日志管理</h1>
+                <div class="user-info">
+                    <span>管理员</span>
+                    <i class="fas fa-user-circle"></i>
+                </div>
+            </header>
+
+            <div class="cards-container">
+                <div class="card" style="grid-column: 1 / -1;">
+                    <div class="card-header">
+                        <i class="fas fa-file-alt"></i>
+                        <!-- 修改标题为 Gitee 日志 -->
+                        <h3>YOIMG运行日志</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="log-content-container">
+                            <pre id="logContent">加载 Gitee 日志中...</pre>
+                        </div>
+                        <div class="card-footer">
+                            <span>刷新日志</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    
+    <script>
+        // 核心修改：请求gitee.log接口
+        function loadGiteeLog() {
+            fetch('/api/get_gitee_log')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('logContent').textContent = data.content;
+                    } else {
+                        document.getElementById('logContent').textContent = data.content;
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('logContent').textContent = `请求 Gitee 日志失败: ${err.message}`;
+                });
+        }
+
+        window.onload = function() {
+            loadGiteeLog();
+            // 每10秒自动刷新
+            setInterval(loadGiteeLog, 1000);
+        };
+
+        // 侧边栏切换逻辑
+        document.getElementById('menuToggle')?.addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('active');
+            document.getElementById('mainContent').classList.toggle('active');
+        });
+
+        document.getElementById('closeSidebar')?.addEventListener('click', function() {
+            document.getElementById('sidebar').classList.remove('active');
+            document.getElementById('mainContent').classList.remove('active');
+        });
+    </script>
+</body>
+</html>

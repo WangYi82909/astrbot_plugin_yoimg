@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOIMG插件管理</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-plug"></i>
+                    <span>YOIMG</span>
+                </div>
+                <button class="close-sidebar" id="closeSidebar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="active">
+                        <a href="#">
+                            <i class="fas fa-home"></i>
+                            <span>主页</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="config.html">
+                            <i class="fas fa-cog"></i>
+                            <span>接口配置</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="personas.html">
+                            <i class="fas fa-user-circle"></i>
+                            <span>人格管理</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="giteeimg.html">
+                            <i class="fas fa-globe"></i>
+                            <span>照片管理</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="logs.html">
+                            <i class="fas fa-history"></i>
+                            <span>历史调用</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="pool.html">
+                            <i class="fas fa-share-alt"></i>
+                            <span>共享流量池</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 顶部栏 -->
+            <header class="topbar">
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1>YOIMG插件管理页</h1>
+                <div class="user-info">
+                    <span>管理员</span>
+                    <i class="fas fa-user-circle"></i>
+                </div>
+            </header>
+
+            <!-- 数据卡片区 -->
+            <div class="cards-container">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-line"></i>
+                        <h3>总调用</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="number" id="totalCalls">0</div>
+                        <div class="card-footer">
+                            <span>累计调用次数</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-calendar-day"></i>
+                        <h3>今日调用</h3>
+                    </div>
+                    <div class="card-content">
+                        <div class="number" id="todayCalls">0</div>
+                        <div class="card-footer">
+                            <span>今日调用次数</span>
+                        </div>
+                    </div>
+                </div>
+
+<!-- 在主页的cards-container中添加这个卡片 -->
+<div class="card" style="grid-column: 1 / -1;">
+    <div class="card-header">
+        <i class="fas fa-terminal"></i>
+        <h3>Flask运行日志</h3>
+    </div>
+    <div class="card-content">
+        <div class="log-list" id="flaskLogs" style="max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 0.9rem; padding: 10px; background: #f5f5f5; border-radius: 8px;">
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <span>加载Flask日志...</span>
+            </div>
+        </div>
+        <div class="card-footer">
+            <span>运行日志</span>
+        </div>
+    </div>
+</div>
+
+
+
+    <script src="script.js"></script>
+    <script>
+// 加载Flask运行日志
+function loadFlaskLogs() {
+    fetch('/api/flask_logs')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const logsDiv = document.getElementById('flaskLogs');
+                if (data.logs && data.logs.trim()) {
+                    logsDiv.textContent = data.logs;
+                } else {
+                    logsDiv.textContent = '暂无日志记录';
+                }
+                
+                // 滚动到底部
+                logsDiv.scrollTop = logsDiv.scrollHeight;
+            }
+        })
+        .catch(error => {
+            console.error('加载Flask日志失败:', error);
+        });
+}
+
+// 每秒刷新一次
+setInterval(loadFlaskLogs, 10000);
+
+// 页面加载后立即加载
+document.addEventListener('DOMContentLoaded', loadFlaskLogs);
+</script>
+</body>
+</html>

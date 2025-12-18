@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>接口配置 - YOIMG插件管理</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+    /* 按钮基础样式 */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--sidebar-color), #8abd8b);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #8abd8b, #7aac7b);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-secondary {
+    background: var(--light-gray);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    background: #e8f4e8;
+    transform: translateY(-1px);
+}
+
+.btn-reset {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ffcdd2;
+}
+
+.btn-reset:hover {
+    background: #ffcdd2;
+    transform: translateY(-1px);
+}
+
+/* 列表输入样式 */
+.list-input {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.list-input input {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.list-input button {
+    background: var(--sidebar-color);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    min-width: 60px;
+    transition: all 0.2s;
+}
+
+.list-input button:hover {
+    background: #8abd8b;
+    transform: translateY(-1px);
+}
+
+.list-items {
+    margin-top: 8px;
+    max-height: 120px;
+    overflow-y: auto;
+    padding: 5px;
+    background: rgba(157, 204, 158, 0.05);
+    border-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 6px 10px;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    font-size: 0.85rem;
+}
+
+.list-item:hover {
+    background: #f9f9f9;
+}
+
+.list-item span {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 10px;
+}
+
+.list-item button {
+    background: #ff6b6b;
+    color: white;
+    border: none;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all 0.2s;
+}
+
+.list-item button:hover {
+    background: #ff5252;
+    transform: scale(1.05);
+}
+
+.empty-list {
+    color: #999;
+    font-size: 0.85rem;
+    padding: 10px;
+    text-align: center;
+    font-style: italic;
+}
+
+/* 提示信息样式 */
+.field-hint {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 100%;
+    width: 280px;
+    background: rgba(0, 0, 0, 0.95);
+    color: white;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    margin-top: 5px;
+}
+
+.form-group:hover .field-hint {
+    display: block;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 文本域样式 */
+.form-control.textarea {
+    min-height: 80px;
+    resize: vertical;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    padding: 8px 10px;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* 数字输入框样式 */
+input[type="number"] {
+    max-width: 150px;
+}
+
+/* 条件字段指示器 */
+.form-group[data-condition]::before {
+    content: "⚙️";
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 0.8rem;
+    opacity: 0.6;
+}
+
+/* 操作按钮容器 */
+.form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+    grid-column: 1 / -1;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .config-form {
+        grid-template-columns: 1fr;
+        padding: 12px;
+        gap: 12px;
+    }
+    
+    .form-group {
+        padding: 10px;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .list-input {
+        flex-direction: column;
+    }
+    
+    .list-input input {
+        width: 100%;
+    }
+    
+    .list-input button {
+        width: 100%;
+        margin-top: 5px;
+    }
+}
+</style>
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-plug"></i>
+                    <span>YOIMG</span>
+                </div>
+                <button class="close-sidebar" id="closeSidebar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="index.html">
+                            <i class="fas fa-home"></i>
+                            <span>主页</span>
+                        </a>
+                    </li>
+                    <li class="active">
+                        <a href="config.html">
+                            <i class="fas fa-cog"></i>
+                            <span>接口配置</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="personas.html">
+                            <i class="fas fa-user-circle"></i>
+                            <span>人格管理</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="giteeimg.html">
+                            <i class="fas fa-globe"></i>
+                            <span>照片管理</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="logs.html">
+                            <i class="fas fa-history"></i>
+                            <span>历史调用</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="pool.html">
+                            <i class="fas fa-share-alt"></i>
+                            <span>共享流量池</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 顶部栏 -->
+            <header class="topbar">
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1>接口配置</h1>
+                <div class="user-info">
+                    <span>管理员</span>
+                    <i class="fas fa-user-circle"></i>
+                </div>
+            </header>
+
+            <!-- 配置表单 -->
+            <div class="config-page">
+                <h2><i class="fas fa-sliders-h"></i> YOIMG插件配置</h2>
+                
+                <div id="successMessage" class="success-message">
+                    <i class="fas fa-check-circle"></i> 配置保存成功！
+                </div>
+                
+                <form id="configForm" class="config-form">
+                    <!-- 表单内容由JavaScript动态生成 -->
+                </form>
+                
+                <div class="form-actions">
+                    <button type="submit" form="configForm" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 保存配置
+                    </button>
+                    <button type="button" id="resetBtn" class="btn btn-reset">
+                        <i class="fas fa-undo"></i> 重置为默认
+                    </button>
+                    <button type="button" id="backBtn" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> 返回主页
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+    <script src="config.js"></script>
+</body>
+</html>

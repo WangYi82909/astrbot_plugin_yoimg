@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人格管理 - YOIMG插件管理</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 侧边栏 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-plug"></i>
+                    <span>YOIMG</span>
+                </div>
+                <button class="close-sidebar" id="closeSidebar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="index.html">
+                            <i class="fas fa-home"></i>
+                            <span>主页</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="config.html">
+                            <i class="fas fa-cog"></i>
+                            <span>接口配置</span>
+                        </a>
+                    </li>
+                    <li class="active">
+                        <a href="#">
+                            <i class="fas fa-user-circle"></i>
+                            <span>人格管理</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="config.html">
+                            <i class="fas fa-globe"></i>
+                            <span>站点配置</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="logs.html">
+                            <i class="fas fa-history"></i>
+                            <span>历史调用</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="pool.html">
+                            <i class="fas fa-share-alt"></i>
+                            <span>共享流量池</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 顶部栏 -->
+            <header class="topbar">
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1>人格管理</h1>
+                <div class="user-info">
+                    <span>管理</span>
+                    <i class="fas fa-user-circle"></i>
+                </div>
+            </header>
+
+            <!-- 人格卡片区 -->
+            <div class="personas-container">
+                <div class="personas-header">
+                    <h2><i class="fas fa-users"></i> 人格列表</h2>
+                    <button id="addPersonaBtn" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> 添加人格
+                    </button>
+                </div>
+                
+                <div id="personasList" class="personas-list">
+                    <!-- 人格卡片会动态加载到这里 -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    
+
+    <script src="script.js"></script>
+    <script src="personas.js"></script>
+</body>
+</html>
