@@ -1,5 +1,5 @@
 from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
-from astrbot.api.star import Context, Star, register
+from astrbot.api.star import Context, Star, register, StarTools
 from astrbot.api import logger
 from astrbot.api.message_components import Plain, Image
 from openai import AsyncOpenAI
@@ -14,22 +14,34 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 import os
 import re
+import threading
+import subprocess
+import sys
 
 @register("astrbot_plugin_yoimg", "梦千秋", "基于Gitee提供全模型文生图，图生图。", "1.0")
 class YoYoPlugin(Star):
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
         self.config = config
-        self.plugin_dir = Path(__file__).parent.resolve()
         
-        self.log_dir = self.plugin_dir / "logs"
-        self.log_dir.mkdir(parents=True, exist_ok=True)
-        self.img_dir = self.plugin_dir / "img"
-        self.img_dir.mkdir(parents=True, exist_ok=True)
+        # ✅ 使用StarTools获取规范数据目录
+        self.data_dir = StarTools.get_data_dir(self)
+        
+        # 所有持久化数据应存储在data_dir下
+        self.log_dir = self.data_dir / "logs"
+        self.img_dir = self.data_dir / "img"
         self.gitee_img_dir = self.img_dir / "giteeimg"
-        self.gitee_img_dir.mkdir(parents=True, exist_ok=True)
         
-        # API基础配置
+        # 确保目录存在
+        self.data_dir.mkdir(parents=True, exist_ok=True)
+        self.log_dir.mkdir(exist_ok=True)
+        self.img_dir.mkdir(exist_ok=True)
+        self.gitee_img_dir.mkdir(exist_ok=True)
+        
+        # 配置文件路径
+        self.personas_file = self.data_dir / "personas.json"
+        
+        # ✅ 从配置schema读取所有配置
         self.base_url = config.get("base_url", "https://ai.gitee.com/v1")
         self.api_keys = config.get("api_key", [])
         
@@ -40,8 +52,8 @@ class YoYoPlugin(Star):
         
         # 图生图配置
         self.img2img_endpoint = config.get("img2img_endpoint", "https://ai.gitee.com/v1/images/edits")
-        self.img2img_model = config.get("img2img_model", "z-image-turbo")
-        self.num_inference_steps = config.get("num_inference_steps", 8)
+        self.img2img_model = config.get("img2img_model", "Qwen-Image-Edit")
+        self.num_inference_steps = config.get("num_inference_steps", 25)
         self.cfg_scale = config.get("cfg_scale", 1)
         
         # 通用图片配置
@@ -59,66 +71,99 @@ class YoYoPlugin(Star):
         
         # 共享流量池
         self.debug = config.get("debug_mode", False)
-        use_shared_pool = config.get("use_shared_pool", False)
-        if isinstance(use_shared_pool, str):
-            self.use_shared_pool = use_shared_pool.lower() == "true"
-        else:
-            self.use_shared_pool = bool(use_shared_pool)
-        self.shared_pool_url = config.get("shared_pool_url", "")
+        self.use_shared_pool = config.get("use_shared_pool", False)
+        self.shared_pool_url = config.get("shared_pool_url", "http://www.内卷.xyz/v1/")
         
-        self.personas_file = self.plugin_dir / "personas.json"
+        # 加载人格数据
         self.personas = self._load_personas()
         
+        # 处理状态跟踪
         self.processing = set()
         
+        # Flask服务器进程引用
+        self.flask_process = None
+        
+        # 初始化OpenAI客户端
         self._init_openai_client()
         
-        # 新增：调用app.py启动Flask服务器
-        self._run_app_py()
+        # 启动Flask服务器
+        self._start_flask_server()
     
-    def _run_app_py(self):
-        """运行app.py文件启动Flask服务器"""
+    def _start_flask_server(self):
+        """启动Flask服务器"""
         try:
-            import subprocess
-            import sys
-            import threading
-            import os
+            # 确保必要的目录存在
+            html_dir = self.data_dir / "html"
+            html_dir.mkdir(exist_ok=True)
             
-            app_py_path = self.plugin_dir / "app.py"
+            # 获取当前插件目录
+            current_file = Path(__file__).resolve()
+            plugin_dir = current_file.parent
             
-            if app_py_path.exists():
-                def run_flask():
-                    # 切换到插件目录，确保相对路径正确
-                    original_cwd = os.getcwd()
-                    os.chdir(self.plugin_dir)
-                    try:
-                        # 使用当前Python解释器执行app.py
-                        subprocess.run([sys.executable, "app.py"], 
-                                     check=False,
-                                     capture_output=True,
-                                     text=True)
-                    finally:
-                        os.chdir(original_cwd)
-                
-                # 在新线程中运行Flask服务器
-                flask_thread = threading.Thread(target=run_flask, daemon=True)
-                flask_thread.start()
-                
-                # 等待一小段时间让服务器启动
-                import time
-                time.sleep(2)
-                
-                logger.info("✅ 成功调用app.py启动Flask服务器")
-                print("调用成功开启：app.py已启动Flask服务器")
-            else:
-                logger.warning(f"⚠️ app.py文件不存在于: {app_py_path}")
-                print(f"警告：未找到app.py文件，路径: {app_py_path}")
-                
+            # 获取Flask服务器模块路径
+            flask_module = self._get_flask_server_module()
+            
+            # 设置环境变量传递数据目录给Flask
+            env = os.environ.copy()
+            env['YOIMG_DATA_DIR'] = str(self.data_dir)
+            env['YOIMG_PLUGIN_DIR'] = str(plugin_dir)
+            
+            # 启动Flask服务器进程
+            self.flask_process = subprocess.Popen(
+                [sys.executable, "-c", flask_module],
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                encoding='utf-8'
+            )
+            
+            # 启动监控线程
+            monitor_thread = threading.Thread(
+                target=self._monitor_flask_output,
+                daemon=True
+            )
+            monitor_thread.start()
+            
+            # 等待Flask服务器启动
+            time.sleep(2)
+            
+            logger.info("✅ Flask管理面板已启动，数据目录: %s", self.data_dir)
+            
         except Exception as e:
-            logger.error(f"❌ 调用app.py失败: {str(e)}")
-            print(f"错误：调用app.py失败: {str(e)}")
+            logger.error("❌ 启动Flask服务器失败: %s", str(e))
+    
+    def _monitor_flask_output(self):
+        """监控Flask服务器的输出"""
+        if self.flask_process:
+            while True:
+                output = self.flask_process.stdout.readline()
+                if output:
+                    logger.debug("[Flask] %s", output.strip())
+                if self.flask_process.poll() is not None:
+                    break
+    
+    def _get_flask_server_module(self):
+        """获取Flask服务器模块代码"""
+        return '''
+import sys
+import os
+from pathlib import Path
+
+# 从环境变量获取数据目录
+data_dir = os.environ.get('YOIMG_DATA_DIR', '.')
+plugin_dir = os.environ.get('YOIMG_PLUGIN_DIR', '.')
+
+# 将插件目录添加到Python路径
+sys.path.insert(0, plugin_dir)
+
+# 导入并运行Flask服务器
+from flask_server import run_flask_server
+run_flask_server(data_dir)
+'''
     
     def _init_openai_client(self):
+        """初始化OpenAI客户端"""
         if self.api_keys:
             api_key = self.api_keys[0] if isinstance(self.api_keys, list) else str(self.api_keys)
             self.openai_client = AsyncOpenAI(
@@ -130,23 +175,26 @@ class YoYoPlugin(Star):
             self.openai_client = None
     
     def _load_personas(self) -> List[Dict]:
+        """加载人格数据"""
         try:
             if self.personas_file.exists():
                 with open(self.personas_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                 return data
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error("加载人格数据失败: %s", str(e))
         return []
     
     def _save_personas(self):
+        """保存人格数据"""
         try:
             with open(self.personas_file, 'w', encoding='utf-8') as f:
                 json.dump(self.personas, f, ensure_ascii=False, indent=2)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error("保存人格数据失败: %s", str(e))
     
     def _find_persona(self, persona_id: str) -> Optional[Dict]:
+        """查找指定人格"""
         self.personas = self._load_personas()
         for persona in self.personas:
             if persona.get("persona_id") == persona_id:
@@ -155,6 +203,7 @@ class YoYoPlugin(Star):
     
     @filter.command("yoimg")
     async def init_persona(self, event: AstrMessageEvent):
+        """初始化人格"""
         user_id = event.get_sender_id()
         if user_id in self.processing:
             yield event.plain_result("🔄 进行中，请稍候...")
@@ -203,12 +252,14 @@ class YoYoPlugin(Star):
             yield event.plain_result(result_msg)
             
         except Exception as e:
+            logger.error("人格初始化失败: %s", str(e))
             yield event.plain_result(f"❌ 初始化失败: {str(e)}")
         finally:
             self.processing.discard(user_id)
     
     @filter.command("yo")
     async def txt2img_command(self, event: AstrMessageEvent):
+        """文生图命令"""
         message_str = event.message_str.strip()
         if message_str.startswith("/yo "):
             keyword = message_str[4:].strip()
@@ -224,6 +275,7 @@ class YoYoPlugin(Star):
     
     @filter.command("yoyo")
     async def img2img_command(self, event: AstrMessageEvent):
+        """图生图命令"""
         message_str = event.message_str.strip()
         if message_str.startswith("/yoyo "):
             keyword = message_str[6:].strip()
@@ -239,6 +291,7 @@ class YoYoPlugin(Star):
     
     @filter.command("yozero")
     async def txt2img_direct_command(self, event: AstrMessageEvent):
+        """直接文生图命令"""
         message_str = event.message_str.strip()
         if message_str.startswith("/yozero "):
             keyword = message_str[8:].strip()
@@ -269,11 +322,13 @@ class YoYoPlugin(Star):
                 yield event.plain_result(f"❌ 生成失败: {result['error']}")
                 
         except Exception as e:
+            logger.error("直接文生图失败: %s", str(e))
             yield event.plain_result(f"❌ 生成过程异常: {str(e)}")
         finally:
             self.processing.discard(user_id)
     
     async def _generate_image(self, event: AstrMessageEvent, keyword: str, is_txt2img: bool):
+        """生成图像核心逻辑"""
         user_id = event.get_sender_id()
         if user_id in self.processing:
             yield event.plain_result("🔄 进行中，请稍候...")
@@ -314,7 +369,7 @@ class YoYoPlugin(Star):
             else:
                 final_prompt = f"{polished_prompt}，{keyword}"
             
-            # 关键修复：校验final_prompt不为空
+            # 校验final_prompt不为空
             if not final_prompt.strip():
                 yield event.plain_result("❌ 生成提示词为空，无法调用API")
                 return
@@ -327,11 +382,12 @@ class YoYoPlugin(Star):
                     yield event.plain_result("❌ 人格未上传形象图，请通过管理面板上传")
                     return
                 
-                image_path = self.plugin_dir / png_path
-                image_path = image_path.resolve()
+                image_path = Path(png_path)
+                if not image_path.is_absolute():
+                    image_path = self.data_dir / png_path
                 
                 if not image_path.exists():
-                    error_msg = f"❌ 致命错误：文件不存在！\n目标路径: {image_path}"
+                    error_msg = f"❌ 文件不存在！\n路径: {image_path}"
                     self._log_error_only(error_msg)
                     yield event.plain_result(error_msg)
                     return
@@ -347,11 +403,13 @@ class YoYoPlugin(Star):
                 yield event.plain_result(f"❌ 生成失败: {result['error']}")
                 
         except Exception as e:
+            logger.error("图像生成失败: %s", str(e))
             yield event.plain_result(f"❌ 生成过程异常: {str(e)}")
         finally:
             self.processing.discard(user_id)
     
     async def _call_txt2img_api(self, req_id: str, prompt: str) -> Dict[str, Any]:
+        """调用文生图API"""
         if self.use_shared_pool and self.shared_pool_url:
             return await self._call_shared_pool_txt2img(req_id, prompt)
         
@@ -419,16 +477,13 @@ class YoYoPlugin(Star):
         api_key = self.api_keys[0] if isinstance(self.api_keys, list) else str(self.api_keys)
         
         try:
-            # 读取配置中的步数
-            num_inference_steps = self.config.get("num_inference_steps", 30)
-            
             request_body = {
                 "prompt": prompt,
                 "model": self.txt2img_model,
                 "size": self.size,
                 "n": 1,
                 "response_format": "url",
-                "num_inference_steps": num_inference_steps
+                "num_inference_steps": self.num_inference_steps
             }
             
             self._log_to_gitee(req_id, "txt2img_native", "request", {
@@ -484,27 +539,22 @@ class YoYoPlugin(Star):
             return self._error_result(f"原生文生图失败: {error_info}")
     
     async def _call_shared_pool_txt2img(self, req_id: str, prompt: str) -> Dict[str, Any]:
-        """调用共享流量池文生图API - 修复空请求问题"""
-        # 关键修复1：校验共享池URL和prompt不为空
+        """调用共享流量池文生图API"""
         if not self.shared_pool_url:
             return self._error_result("共享流量池URL未配置")
         if not prompt.strip():
             return self._error_result("文生图提示词为空，无法发送请求")
         
         try:
-            num_inference_steps = self.config.get("num_inference_steps", 30)
-            
-            # 关键修复2：确保request_body所有必填参数存在且非空
             request_body = {
                 "prompt": prompt.strip(),
                 "model": self.txt2img_model or "z-image-turbo",
                 "size": self.size or "1024x1024",
                 "n": 1,
                 "response_format": "url",
-                "num_inference_steps": num_inference_steps
+                "num_inference_steps": self.num_inference_steps
             }
 
-            # 关键修复3：过滤掉值为空的参数（避免传递无效空值）
             request_body = {k: v for k, v in request_body.items() if v}
             
             self._log_to_gitee(req_id, "shared_pool_txt2img", "request", {
@@ -512,7 +562,6 @@ class YoYoPlugin(Star):
                 "body": request_body
             })
             
-            # 关键修复4：添加默认请求头，确保JSON格式被正确识别
             headers = {
                 "Content-Type": "application/json"
             }
@@ -564,6 +613,7 @@ class YoYoPlugin(Star):
             return self._error_result(f"共享流量池文生图失败: {error_info}")
     
     async def _call_img2img_api(self, req_id: str, prompt: str, image_path: Path) -> Dict[str, Any]:
+        """调用图生图API"""
         if self.use_shared_pool and self.shared_pool_url:
             return await self._call_shared_pool_img2img(req_id, prompt, image_path)
         
@@ -662,8 +712,7 @@ class YoYoPlugin(Star):
             return self._error_result(f"图生图失败: {error_info}")
     
     async def _call_shared_pool_img2img(self, req_id: str, prompt: str, image_path: Path) -> Dict[str, Any]:
-        """调用共享流量池图生图API - 修复空请求问题"""
-        # 关键修复1：校验基础参数
+        """调用共享流量池图生图API"""
         if not self.shared_pool_url:
             return self._error_result("共享流量池URL未配置")
         if not prompt.strip():
@@ -673,7 +722,6 @@ class YoYoPlugin(Star):
         
         try:
             data = aiohttp.FormData()
-            # 关键修复2：确保参数非空
             data.add_field('model', self.img2img_model or "z-image-turbo")
             data.add_field('prompt', prompt.strip())
             data.add_field('n', '1')
@@ -762,6 +810,7 @@ class YoYoPlugin(Star):
             return self._error_result(f"共享流量池图生图失败: {error_info}")
     
     async def _call_polish_api(self, system_prompt: str, user_content: str, api_type: str) -> Optional[str]:
+        """调用润色API"""
         if not self.sf_key:
             return None
         
@@ -812,10 +861,12 @@ class YoYoPlugin(Star):
                     return result["choices"][0]["message"]["content"].strip()
             
             return None
-        except Exception:
+        except Exception as e:
+            logger.error("润色API调用失败: %s", str(e))
             return None
     
     def _log_to_gitee(self, req_id: str, api_type: str, call_type: str, data: Dict):
+        """记录Gitee日志"""
         try:
             log_file = self.log_dir / "gitee.log"
             log_entry = {
@@ -828,10 +879,11 @@ class YoYoPlugin(Star):
             
             with open(log_file, 'a', encoding='utf-8') as f:
                 f.write(json.dumps(log_entry, ensure_ascii=False) + '\n')
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error("记录Gitee日志失败: %s", str(e))
     
     def _log_error_only(self, error_msg: str):
+        """记录错误日志"""
         try:
             log_file = self.log_dir / "error.log"
             log_entry = {
@@ -840,10 +892,11 @@ class YoYoPlugin(Star):
             }
             with open(log_file, 'a', encoding='utf-8') as f:
                 f.write(json.dumps(log_entry, ensure_ascii=False) + '\n')
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error("记录错误日志失败: %s", str(e))
     
     async def _get_current_persona_data(self, event: AstrMessageEvent) -> Optional[Dict]:
+        """获取当前人格数据"""
         try:
             umo = event.unified_msg_origin
             conv_mgr = self.context.conversation_manager
@@ -872,10 +925,12 @@ class YoYoPlugin(Star):
                 "raw_persona": raw_persona
             }
             
-        except Exception:
+        except Exception as e:
+            logger.error("获取当前人格数据失败: %s", str(e))
             return None
     
     async def _get_conversation_data(self, event: AstrMessageEvent):
+        """获取对话数据"""
         try:
             umo = event.unified_msg_origin
             conv_mgr = self.context.conversation_manager
@@ -918,10 +973,12 @@ class YoYoPlugin(Star):
             
             return persona_text, chat_text
             
-        except Exception:
+        except Exception as e:
+            logger.error("获取对话数据失败: %s", str(e))
             return "默认人设", ""
     
     async def _download_image(self, url: str) -> Path:
+        """下载图片到本地"""
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
                 if resp.status == 200:
@@ -935,6 +992,7 @@ class YoYoPlugin(Star):
                     raise Exception(f"下载失败: HTTP {resp.status}")
     
     def _error_result(self, error: str) -> Dict[str, Any]:
+        """返回错误结果"""
         return {
             "success": False,
             "error": error
@@ -999,7 +1057,6 @@ class YoYoPlugin(Star):
             else:
                 final_prompt = f"{polished_prompt}，{keyword}"
             
-            # 关键修复：LLM工具中也校验prompt非空
             if not final_prompt.strip():
                 return "生成提示词为空，无法调用API"
 
@@ -1014,8 +1071,9 @@ class YoYoPlugin(Star):
                 if not png_path:
                     return "人格未上传形象图"
                 
-                image_path = self.plugin_dir / png_path
-                image_path = image_path.resolve()
+                image_path = Path(png_path)
+                if not image_path.is_absolute():
+                    image_path = self.data_dir / png_path
                 
                 if not image_path.exists():
                     return "形象图文件不存在"
@@ -1031,10 +1089,22 @@ class YoYoPlugin(Star):
                 return f"生成失败: {result.get('error', '未知错误')}"
                 
         except Exception as e:
-            error_msg = str(e);
+            error_msg = str(e)
+            logger.error("LLM工具生成图像失败: %s", error_msg)
             return f"生成过程异常: {error_msg}"
         finally:
             self.processing.discard(user_id)
     
     async def terminate(self):
+        """插件终止时清理资源"""
         self.processing.clear()
+        if self.flask_process:
+            logger.info("正在关闭Flask服务器...")
+            self.flask_process.terminate()
+            try:
+                self.flask_process.wait(timeout=5)
+                logger.info("Flask服务器已关闭")
+            except subprocess.TimeoutExpired:
+                self.flask_process.kill()
+                logger.warning("强制关闭Flask服务器")
+            self.flask_process = None
