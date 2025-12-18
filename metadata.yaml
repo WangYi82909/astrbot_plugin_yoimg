@@ -1,5 +1,11 @@
 name: astrbot_plugin_yoimg
-desc: 这是一个基于AstrBot框架的图像生成扩展插件，支持结合人设聊天记录关键词润色生图，支持中转请求
+desc: 基于Gitee，提供全图像编辑模型的文生图，图生图服务，提供Webui面板，可上传每个人格的形象图，可使用额外的润色模型机制与自定义润色词。
 version: v1.0.1
-author: wangyi
-repo: https://github.com/WangYi82909/astrbot_plugin_yoimg
+author: 梦千秋
+repo: https://github.com/muyouzhi6/astrbot_plugin_yoimg
+
+
+
+
+
+

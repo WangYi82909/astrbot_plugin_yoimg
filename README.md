@@ -1,235 +1,127 @@
-![本地图片描述](logo.png)
-<!-- 居中显示名称 -->
-<p align="center">**YOIMG文档**</p>
-AstrBot 图像生成插件帮助文档
+# AstrBot Gitee Yoimg插件
 
-📌 插件概述
+本插件提供多样化图片生成Webui面板，支持自定义多种参数，支持llm自然调用，支持提取人设和聊天记录，支持使用润色模型和自定义润色词来优化你的生图命令，支持Gitee模力方舟图片全模型文生图，图生图。
+##Webui支持
+- 多人格多形象图（若无法部署参考下面的persona条）
+- 照片管理
+- 人格数据修改
+- 详细日志查看
+- 更多配置参数
 
-这是一个基于AstrBot框架的图像生成插件，支持人格初始化与智能图像生成功能
-本插件极其依赖php服务，请你自行获取本仓库html.zip解压到网站，并在配置页填写网站url
-如果您的服务器可以访问gitee生图接口，那么请在代理页填写当前网站的域名
-如果您的服务器无法访问gitee，请将本网站目录的hk.php，上传到香港虚拟主机上，并在配置页代理处填写绑定香港虚拟主机的域名，不用添加末尾/
-你可以在配置页最下方填写润词模型
-我计划在下个版本中添加共享流量池，您可以上传自己的免费key，和使用其他人的共享接口。
-🔧 配置说明
+##我无法部署Webui？
+依赖flask框架，只有你安装flask依赖，跳转到本目录并python3 app.py跑起来就能使用！
+如果不能使用，依然可以正常使用本插件，只是缺少互动性。
 
-配置文件 (_conf_schema.json)
+##人物形象图
+- 访问ip:1200即可
+- 如果你无法使用，请进入插件目录personas.json人格配置文件，上传到img目录，其中png_path修改为“img/照片.png”
+否则图生图无效。
 
-```json
-{
-  "server_url": "服务器地址（如：http://154.40.35.203:520）",
-  "enable_debug_log": "是否启用调试日志"
-}
+##功能特性
+- llm自然调用
+- 支持gitee的图片全模型，对关键词进行润色时，支持使用所有模型，需要自行填写api地址key。
+- /yoimg 初始化：命令，提取当前人设精简内容，你可以自行设定提取什么，也可以在webui面板重新填写
+- /yo 关键词：文生图命令，提取人设和聊天记录，通过设置的润色模型来补全
+- /yoyo 关键词：图生图命令，提取人设和聊天记录通过设置的润色模型补全
+- /yozero 关键词：不提取任何聊天记录和人设，从0生成，如果你开启了润色，此刻润色会介入
+- 图片比例和分辨率请在插件配置/webui调整
+- 支持gitee图片处理文生图，图生图全模型
+- 流量池功能：当开启时，您的请求会以post形式转发给他并返回结果，注意，不会携带您的令牌，每小时不超过20张，我们遵循自助共享机制，在流量池中我们提供2000次每天免费调用余额，您在安装插件后默认关闭，若您不需要请关闭并重启astrbot。
+## 安装Webui可视化面板
+###宝塔部署
 ```
-
-📋 命令列表
-
-1. /yo 初始化
-
-功能：上传当前对话的人格到服务器进行关键词提取
-
-流程：
-
-1. 获取当前对话的人格ID和内容
-2. 生成随机令牌
-3. 上传到服务器 /up.php 接口
-4. 缓存服务器返回的关键词
-
-使用示例：
-
+跳转目录：cd /www/dk_project/dk_app/astrbot/astrbot_WrLE/data/plugins/astrbot_plugin_yoimg //此处可能不固定
+一键执行：docker run -d --name flask-aiimg -p 1200:1200 -v $(pwd)/html:/html -v $(pwd)/img:/img -v $(pwd)/logs:/logs -v $(pwd)/personas.json:/personas.json -v $(pwd)/_conf_schema.json:/_conf_schema.json -v $(pwd)/app.py:/app.py:ro -e TZ=Asia/Shanghai --restart unless-stopped --workdir / python:3.9-slim sh -c "pip install flask pymysql mysql-connector-python -q && python /app.py"
+请确保1200端口开启
 ```
-/yo 初始化
+###1pan部署
 ```
-
-2. /yoimg <关键词> - 生成图像
-
-功能：基于当前人格和聊天记录生成图像
-
-参数：
-
-· <关键词>：图像描述关键词（必需）
-
-流程：
-
-1. 检查人格是否已初始化
-2. 获取最近聊天记录
-3. 发送到服务器 /us.php 接口
-4. 返回生成的图片
-
-使用示例：
-
+一键执行：cd "/opt/1panel/apps/astrbot/astrbot/data/plugins/astrbot_plugin_yoimg" && docker run -d --name flask-aiimg -p 1200:1200 -v $(pwd)/html:/html -v $(pwd)/img:/img -v $(pwd)/logs:/logs -v $(pwd)/personas.json:/personas.json -v $(pwd)/_conf_schema.json:/_conf_schema.json -v $(pwd)/app.py:/app.py:ro -e TZ=Asia/Shanghai --restart unless-stopped --workdir / python:3.9-slim sh -c "pip install flask pymysql mysql-connector-python -q && python /app.py"
+请确保路径是插件目录！
 ```
-/yoimg 一个可爱的小女孩在公园玩耍
+##其余部署
+###win系统
 ```
-
-3. /hq - 查询历史记录
-
-功能：查看当前对话的人格和最近聊天记录
-
-使用示例：
-
+pip install flask
+cd 插件目录
+python3 app.py
+后台保活即可
 ```
-/hq
-```
+## 配置
 
-🔄 工作流程
+在 插件配置/Webui中中配置参数：
 
-人格初始化流程
+必要：gitee文生图，图生图端口，我已经提供不要修改！
+令牌和参数，cfg不懂勿改
+可选：润色模型，对你的词进行润色，支持自行修改ai的润色词说明
+流量池：默认关闭，开启后你的请求被转发给流量池，不会携带您的key，可在webui面板上传或访问流量池地址（不加v1），我为共享池提供每天2000次免费调用，遵循自助共享原则。
 
-```
-用户输入 /yo
-    ↓
-获取当前人格ID和内容
-    ↓
-生成随机令牌 (6位数字)
-    ↓
-POST 请求 → server_url/up.php
-    ↓
-服务器返回关键词
-    ↓
-本地缓存关键词
-```
+##共享流量池
+我们支持您上传自己的免费令牌。
+在您使用共享流量池时，您的令牌不会被传递
+###流量池暂不支持图生图
 
-图像生成流程
+## Gitee AI API Key获取方法，偷木有知。
+1.访问https://ai.gitee.com/serverless-api?model=z-image-turbo
+
+2.<img width="2241" height="1280" alt="PixPin_2025-12-05_16-56-27" src="https://github.com/user-attachments/assets/77f9a713-e7ac-4b02-8603-4afc25991841" />
+
+3.<img width="240" height="63" alt="PixPin_2025-12-05_16-56-49" src="https://github.com/user-attachments/assets/6efde7c4-24c6-456a-8108-e78d7613f4fb" />
+
+##图像尺寸只支持以下
+    "1:1 (256×256)": (256, 256),
+    "1:1 (512×512)": (512, 512),
+    "1:1 (1024×1024)": (1024, 1024),
+    "1:1 (2048×2048)": (2048, 2048),
+    "4:3 (1152×896)": (1152, 896),
+    "4:3 (2048×1536)": (2048, 1536),
+    "3:4 (768×1024)": (768, 1024),
+    "3:4 (1536×2048)": (1536, 2048),
+    "3:2 (2048×1360)": (2048, 1360),
+    "2:3 (1360×2048)": (1360, 2048),
+    "16:9 (1024×576)": (1024, 576),
+    "16:9 (2048×1152)": (2048, 1152),
+    "9:16 (576×1024)": (576, 1024),
+    "9:16 (1152×2048)": (1152, 2048),
+
+
+### 指令调用
 
 ```
-用户输入 /yoimg <关键词>
-    ↓
-检查人格是否已初始化
-    ↓
-获取最近10条聊天记录
-    ↓
-格式化聊天记录为 "A内容B内容" 格式
-    ↓
-POST 请求 → server_url/us.php
-    ↓
-服务器返回图片URL
-    ↓
-发送图片给用户
+/yoimg 初始化 //必须
+/yo [关键词] //文生图
+/yoyo [关键词] //图生图
+/yozero [关键词] //从0开始文生图
+LLM自然调用
 ```
 
-📡 接口规范
+示例：
+- `/yoimg ` (使用默认比例 1:1)，可携带初始化参数
+- `/yo 看看你的样子`
+- `/yoyo 我想看看小猫`
+- `/yozero 小猫`
 
-人设上传接口
 
-URL: {server_url}/up.php
-方法: POST
-Content-Type: application/json
+### 自然语言调用
 
-请求参数：
+直接与 bot 对话，例如：
+- "帮我画一张小猫的图片"
+- "生成一个二次元风格的少女"
 
-```json
-{
-  "name": "人格ID名称",
-  "token": "随机6位数字令牌",
-  "original_content": "人格的完整system_prompt内容",
-  "timestamp": "YYYY-MM-DDTHH:MM:SS格式的时间戳"
-}
-```
+## 注意事项
 
-响应格式：
+注意，修改配置后若无效需要重启，docker容器部署如果webui进不去请重新执行命令即可
 
-```json
-{
-  "code": 200,
-  "data": {
-    "人设名称": "处理后的人格名称",
-    "提取关键词": "逗号分隔的关键词"
-  }
-}
-```
+### Webui
 
-图像生成接口
+<img width="1152" height="2048" alt="a.png" src="http://www.xn--v6q40c.xyz/img/a.jpg" />
 
-URL: {server_url}/us.php
-方法: POST
-Content-Type: application/json
+<img width="1152" height="2048" alt="b.png" src="http://www.xn--v6q40c.xyz/img/b.jpg" />
 
-请求参数：
+###图生图展示图
 
-```json
-{
-  "personality": "人格ID名称",
-  "chat_record": "格式化的聊天记录（A用户消息B助手消息...）",
-  "prompt": "用户输入的关键词"
-}
-```
+<img width="1152" height="2048" alt="c.png" src="http://www.xn--v6q40c.xyz/img/c.png" />
 
-响应格式：
+<img width="1152" height="2048" alt="d.png" src="http://www.xn--v6q40c.xyz/img/d.png" />
 
-```json
-{
-  "code": 200,
-  "data": {
-    "local_url": "本地图片URL",
-    "gitee_url": "Gitee图片URL",
-    "original_prompt": "原始关键词",
-    "refined_prompt": "优化后的提示词",
-    "personality": "使用的人格ID",
-    "chat_record": "使用的聊天记录"
-  }
-}
-```
 
-🗂️ 数据格式
-
-聊天记录格式
-
-· 用户消息：前缀 A + 内容
-· 助手消息：前缀 B + 内容
-· 示例："A你好B你好啊A今天天气怎么样B天气很好"
-
-时间戳格式
-
-· 格式：YYYY-MM-DDTHH:MM:SS
-· 示例：2025-01-15T14:30:25
-
-⚠️ 注意事项
-
-1. 必须先初始化：使用 /yoimg 前必须先执行 /yo 初始化人格
-2. 人格设置：确保AstrBot中已设置人格
-3. 网络要求：需要能访问配置的服务器地址
-4. 调试模式：开启 enable_debug_log 可查看详细请求/响应信息
-5. 超时设置：所有请求默认超时时间为300秒
-
-🔍 调试信息
-
-开启调试日志后，会显示：
-
-· 请求的完整URL
-· 发送的JSON数据
-· 服务器响应的原始数据
-· 错误详细信息
-
-📁 文件结构
-
-```
-插件目录/
-├── main.py              # 主程序
-├── _conf_schema.json    # 配置文件
-└── data/img_gen_test_cache/
-    └── persona_cache.json  # 人格缓存
-```
-
----
-
-网页版
-#📁 文件夹
-- `api/`api请求信息
-- `astrbot_plugin_yoimg/`插件
-- `img/`照片缓存目录
-- `logs/`日志文件
-
-## 📄 文件列表
-
-- `astrbot_debug.log`人设日志
-- `config.json`配置文件
-- `config.php`配置文件
-- `hk.php`生图接口
-- `index.php`配置页
-- `personality.json`人格存储文件
-- `request.json`响应文件
-- `script.js`无
-- `style.css`无
-- `up.php`人设文件
-- `us.php`发送post到hk.php

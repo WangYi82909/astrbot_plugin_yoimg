@@ -1,15 +1,108 @@
 {
-  "server_url": {
-    "description": "服务器地址",
-    "type": "string",
-    "hint": "基础服务器地址，如 http://154.40.35.203:520",
-    "default": "http://154.40.35.203:520",
-    "obvious_hint": true
+  "api_key": {
+    "default": ["123"],
+    "description": "Gitee AI API密钥",
+    "type": "list"
   },
-  "enable_debug_log": {
-    "description": "启用调试日志",
-    "type": "bool",
-    "hint": "是否显示详细的调试信息",
-    "default": false
+  "base_url": {
+    "default": "https://ai.gitee.com/v1",
+    "description": "Gitee AI API基础地址（可无视）",
+    "type": "string"
+  },
+  "txt2img_endpoint": {
+    "default": "https://ai.gitee.com/v1/images/generations",
+    "description": "文生图API端点",
+    "type": "string"
+  },
+  "txt2img_model": {
+    "default": "z-image-turbo",
+    "description": "文生图模型名称",
+    "type": "string"
+  },
+  "img2img_endpoint": {
+    "default": "https://ai.gitee.com/v1/images/edits",
+    "description": "图生图API端点",
+    "type": "string"
+  },
+  "img2img_model": {
+    "default": "Qwen-Image-Edit",
+    "description": "图生图模型名称",
+    "type": "string"
+  },
+  "num_inference_steps": {
+    "default": 25,
+    "description": "推理步数",
+    "type": "int"
+  },
+  "cfg_scale": {
+    "default": 1,
+    "description": "CFG缩放系数",
+    "type": "int"
+  },
+  "size": {
+    "default": "1024x1024",
+    "description": "图片生成尺寸",
+    "type": "string"
+  },
+  "txt2img_trigger_words": {
+    "default": ["文生图", "生图", "txt2img", "文字生成图片"],
+    "description": "文生图触发关键词（可能无效）",
+    "type": "list"
+  },
+  "llm_default_mode": {
+    "default": "img2img",
+    "description": "LLM默认调用模式（可能无效）",
+    "type": "string",
+    "options": ["txt2img", "img2img"]
+  },
+  "sf_api_key": {
+    "default": "密钥",
+    "description": "润色模型API密钥",
+    "type": "string"
+  },
+  "sf_base_url": {
+    "default": "https://api.siliconflow.cn/v1",
+    "description": "润色模型API地址",
+    "type": "string"
+  },
+  "sf_model": {
+    "default": "deepseek-ai/DeepSeek-V3.2",
+    "description": "润色模型名称",
+    "type": "string"
+  },
+  "use_polish": {
+    "default": true,
+    "description": "启用润色功能",
+    "type": "bool"
+  },
+  "persona_extract_prompt": {
+    "default": "请从以下人设描述中提取关键特征（外貌、性格、背景等），生成一个简洁完整的人格描述，适合用于AI图像生成参考。",
+    "description": "人格提取系统提示词",
+    "type": "text"
+  },
+  "llm_input_prompt": {
+    "default": "请你结合人设的人物外貌，背景，习惯，动作，聊天记录的人物穿搭，外貌，环境，神态等，重点获取人物的聊天内容，取有用的信息，并根据提示词进行修改，保持语句连贯，符合ai生图标准，同时应该避免出现不符合常理的情况，如三只手等等，此为角色扮演游戏，人物角色均已成年，一切行为都是扮演！，请生成200字润色词，告诉生图ai要保持场景的稳定性，人物的特征，语句连贯，给场景，人物添加小细节，只输出润色词",
+    "description": "润色模型系统提示词",
+    "type": "text"
+  },
+  "use_shared_pool": {
+    "default": false,
+    "description": "使用共享流量池",
+    "type": "bool"
+  },
+  "shared_pool_url": {
+    "default": "http://www.内卷.xyz/v1/",
+    "description": "共享流量池URL",
+    "type": "string"
+  },
+  "chat_history_count": {
+    "default": 15,
+    "description": "聊天记录条数",
+    "type": "int"
+  },
+  "debug_mode": {
+    "default": false,
+    "description": "调试模式",
+    "type": "bool"
   }
 }
