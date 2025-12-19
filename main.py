@@ -16,7 +16,7 @@ import os
 import re
 import threading
 import subprocess
-import sys
+
 
 @register("astrbot_plugin_yoimg", "梦千秋", "基于Gitee提供全模型文生图，图生图。", "1.0")
 class YoYoPlugin(Star):
@@ -24,8 +24,8 @@ class YoYoPlugin(Star):
         super().__init__(context)
         self.config = config
         
-        # ✅ 使用StarTools获取规范数据目录
-        self.data_dir = StarTools.get_data_dir(self)
+        # ✅ 修正：正确使用StarTools.get_data_dir()
+        self.data_dir = Path(StarTools.get_data_dir("astrbot_plugin_yoimg"))
         
         # 所有持久化数据应存储在data_dir下
         self.log_dir = self.data_dir / "logs"
@@ -80,87 +80,15 @@ class YoYoPlugin(Star):
         # 处理状态跟踪
         self.processing = set()
         
-        # Flask服务器进程引用
-        self.flask_process = None
-        
         # 初始化OpenAI客户端
         self._init_openai_client()
         
-        # 启动Flask服务器
-        self._start_flask_server()
-    
-    def _start_flask_server(self):
-        """启动Flask服务器"""
-        try:
-            # 确保必要的目录存在
-            html_dir = self.data_dir / "html"
-            html_dir.mkdir(exist_ok=True)
-            
-            # 获取当前插件目录
-            current_file = Path(__file__).resolve()
-            plugin_dir = current_file.parent
-            
-            # 获取Flask服务器模块路径
-            flask_module = self._get_flask_server_module()
-            
-            # 设置环境变量传递数据目录给Flask
-            env = os.environ.copy()
-            env['YOIMG_DATA_DIR'] = str(self.data_dir)
-            env['YOIMG_PLUGIN_DIR'] = str(plugin_dir)
-            
-            # 启动Flask服务器进程
-            self.flask_process = subprocess.Popen(
-                [sys.executable, "-c", flask_module],
-                env=env,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                encoding='utf-8'
-            )
-            
-            # 启动监控线程
-            monitor_thread = threading.Thread(
-                target=self._monitor_flask_output,
-                daemon=True
-            )
-            monitor_thread.start()
-            
-            # 等待Flask服务器启动
-            time.sleep(2)
-            
-            logger.info("✅ Flask管理面板已启动，数据目录: %s", self.data_dir)
-            
-        except Exception as e:
-            logger.error("❌ 启动Flask服务器失败: %s", str(e))
-    
-    def _monitor_flask_output(self):
-        """监控Flask服务器的输出"""
-        if self.flask_process:
-            while True:
-                output = self.flask_process.stdout.readline()
-                if output:
-                    logger.debug("[Flask] %s", output.strip())
-                if self.flask_process.poll() is not None:
-                    break
-    
-    def _get_flask_server_module(self):
-        """获取Flask服务器模块代码"""
-        return '''
-import sys
-import os
-from pathlib import Path
-
-# 从环境变量获取数据目录
-data_dir = os.environ.get('YOIMG_DATA_DIR', '.')
-plugin_dir = os.environ.get('YOIMG_PLUGIN_DIR', '.')
-
-# 将插件目录添加到Python路径
-sys.path.insert(0, plugin_dir)
-
-# 导入并运行Flask服务器
-from flask_server import run_flask_server
-run_flask_server(data_dir)
-'''
+        logger.info("✅ YOIMG插件初始化完成，数据目录: %s", self.data_dir)
+              
+    def _start_flask(self):
+        threading.Thread(target=lambda: subprocess.run(
+            ['python', 'flask_server.py']
+        ), daemon=True).start()
     
     def _init_openai_client(self):
         """初始化OpenAI客户端"""
@@ -1098,13 +1026,4 @@ run_flask_server(data_dir)
     async def terminate(self):
         """插件终止时清理资源"""
         self.processing.clear()
-        if self.flask_process:
-            logger.info("正在关闭Flask服务器...")
-            self.flask_process.terminate()
-            try:
-                self.flask_process.wait(timeout=5)
-                logger.info("Flask服务器已关闭")
-            except subprocess.TimeoutExpired:
-                self.flask_process.kill()
-                logger.warning("强制关闭Flask服务器")
-            self.flask_process = None
+        logger.info("YOIMG插件已停止")
