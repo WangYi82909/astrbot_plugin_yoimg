@@ -344,7 +344,7 @@ def upload_image():
             if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
                 return jsonify({
                     "success": True,
-                    "url": f"/img/{filename}",
+                    "url": f"img/{filename}",
                     "filename": filename,
                     "local_path": local_path
                 })
