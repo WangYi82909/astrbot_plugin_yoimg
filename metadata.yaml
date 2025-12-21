@@ -1,8 +1,9 @@
 name: astrbot_plugin_yoimg
-desc: 本插件提供多样化图片生成Webui面板，支持自定义多种参数，支持llm自然调用，支持提取人设和聊天记录，支持使用润色模型和自定义润色词来优化你的生图命令，支持Gitee模力方舟图片全模型文生图，图生图。
-version: v1.0.2
+desc: 本插件提供多样化图片生成Webui面板，文生图，图生图可用，请确认你的润色模型是否填写正确.支持自定义多种参数，支持llm自然调用，支持提取人设和聊天记录，支持使用润色模型和自定义润色词来优化你的生图命令，支持Gitee模力方舟图片全模型文生图，图生图。
+version: v1.0.3
 author: 梦千秋
 repo: https://github.com/WangYi82909/astrbot_plugin_yoimg
+
 
 
 
