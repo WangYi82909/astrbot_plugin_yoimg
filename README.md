@@ -1,6 +1,21 @@
 # AstrBot Gitee Yoimg插件
 
 本插件提供多样化图片生成Webui面板，支持自定义多种参数，支持llm自然调用，支持提取人设和聊天记录，支持使用润色模型和自定义润色词来优化你的生图命令，支持Gitee模力方舟图片全模型文生图，图生图。
+##注意！
+需要使用/yoimg初始化，初始化失败请检查润色模型是否填写正确
+在配置页更改llm调用时是文生图还是图生图
+/yoimg 初始化人格写入personas.json
+/yozero关键词 从0开始生图
+/yo 关键词 手动文生图 基于聊天记录和人设
+/yoyo 关键词 手动图生图 基于聊天记录和人设 
+以上都可以使用润色模型。
+禁止接入非gitee！
+你也可以选择开启流量池，流量池每天千次调用。，在人格初始化时依然需要润色。
+
+图生图照片应当放置在personas.json的img目录下，在personas.json中png字段填写img/xxx.png/jpg
+webui请自行调试！这个版本文生图 图生图，润色都没有问题
+润色词需要自己设置！默认的不好用.
+
 ##Webui支持
 - 多人格多形象图（若无法部署参考下面的persona条）
 - 照片管理
@@ -123,5 +138,6 @@ LLM自然调用
 <img width="1152" height="2048" alt="c.png" src="http://www.xn--v6q40c.xyz/img/c.png" />
 
 <img width="1152" height="2048" alt="d.png" src="http://www.xn--v6q40c.xyz/img/d.png" />
+
 
 
